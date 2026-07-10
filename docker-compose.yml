@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: bankdemo
+      POSTGRES_USER: bankdemo
+      POSTGRES_PASSWORD: bankdemo
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bankdemo -d bankdemo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bank-demo
+
+  auth:
+    build: ./auth
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: bankdemo
+      DB_USER: bankdemo
+      DB_PASSWORD: bankdemo
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - bank-demo
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      AUTH_URL: http://auth:8081
+    depends_on:
+      - auth
+    networks:
+      - bank-demo
+
+networks:
+  bank-demo:
+    driver: bridge

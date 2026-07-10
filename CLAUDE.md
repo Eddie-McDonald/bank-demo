@@ -19,9 +19,11 @@ Microservices, each in its own language, orchestrated with Docker Compose.
 | Login / auth      | Java (Spring Boot)        | 8081 |
 | Account / balance | .NET (ASP.NET Core)       | 5000 |
 | Transfer          | Python (FastAPI)          | 8000 |
-| Databases         | PostgreSQL (per service)  | 5432 |
+| Databases         | PostgreSQL (shared instance, one DB per service) | 5432 |
 
-Each service gets its own Dockerfile and its own Postgres container (no shared database).
+Each service gets its own Dockerfile. Postgres is a single shared container (one instance,
+one database per service — `authdb`, `accountdb`, etc.) to conserve memory on the 8 GB host;
+see Current status for why this changed from the original one-container-per-service design.
 
 ## Build order
 
@@ -49,11 +51,18 @@ Slice 1 complete and verified (2026-07-10): API gateway (Node/Express, :3000) + 
 `/login` works end-to-end through the gateway to the auth service against the seeded `users`
 table (e.g. alice/password123).
 
-Slice 2 complete and verified (2026-07-10): Account/balance service (.NET/ASP.NET Core, :5000) +
-its own Postgres (`account-db`), wired in `docker-compose.yml`. Exposes
-`GET /accounts/{username}/balance`, backed by a seeded `accounts` table (alice/bob/carol). Gateway
-forwards `GET /accounts/{username}/balance` to it. `docker compose up --build -d` brings up all
-five containers (`db`, `auth`, `account-db`, `account`, `gateway`) cleanly; existing login flow
-still works.
+Slice 2 complete and verified (2026-07-10): Account/balance service (.NET/ASP.NET Core, :5000),
+wired in `docker-compose.yml`. Exposes `GET /accounts/{username}/balance`, backed by a seeded
+`accounts` table (alice/bob/carol). Gateway forwards `GET /accounts/{username}/balance` to it.
+
+Postgres consolidated to a single shared container (2026-07-10): replaced the separate `db` and
+`account-db` containers with one `db` Postgres instance hosting two databases, `authdb` and
+`accountdb`, created and seeded by `db/init.sh` (runs `db/sql/auth.sql` and `db/sql/account.sql`
+against each). Both `auth` and `account` connect to the same `bankdemo` role, just with different
+`DB_NAME`s. Done to cut memory usage on the 8 GB host — was running two Postgres containers for
+two small seed tables. `docker compose up --build -d` brings up all four containers (`db`, `auth`,
+`account`, `gateway`) cleanly; login and balance lookups both verified working end-to-end.
 
 Next: add transfer (Python/FastAPI), then the frontend, one at a time, per the build order above.
+When adding transfer's database, follow the same shared-instance pattern (new `transferdb` +
+seed script under `db/sql/`, wired into `db/init.sh`) rather than a new Postgres container.

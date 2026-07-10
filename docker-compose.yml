@@ -2,13 +2,14 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: bankdemo
+      POSTGRES_DB: postgres
       POSTGRES_USER: bankdemo
       POSTGRES_PASSWORD: bankdemo
     volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./db/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+      - ./db/sql:/docker-entrypoint-initdb.d/sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bankdemo -d bankdemo"]
+      test: ["CMD-SHELL", "pg_isready -U bankdemo"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -22,28 +23,12 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: bankdemo
+      DB_NAME: authdb
       DB_USER: bankdemo
       DB_PASSWORD: bankdemo
     depends_on:
       db:
         condition: service_healthy
-    networks:
-      - bank-demo
-
-  account-db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: accountdb
-      POSTGRES_USER: accountdb
-      POSTGRES_PASSWORD: accountdb
-    volumes:
-      - ./account-db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U accountdb -d accountdb"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
     networks:
       - bank-demo
 
@@ -53,13 +38,13 @@ services:
       - "5000:5000"
     environment:
       ASPNETCORE_URLS: http://+:5000
-      DB_HOST: account-db
+      DB_HOST: db
       DB_PORT: 5432
       DB_NAME: accountdb
-      DB_USER: accountdb
-      DB_PASSWORD: accountdb
+      DB_USER: bankdemo
+      DB_PASSWORD: bankdemo
     depends_on:
-      account-db:
+      db:
         condition: service_healthy
     networks:
       - bank-demo

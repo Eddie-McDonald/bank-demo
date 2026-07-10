@@ -10,12 +10,12 @@ API gateway → Account/balance (.NET/ASP.NET Core) → Postgres.
 docker compose up --build
 ```
 
-This builds the `auth`, `account`, and `gateway` images and starts all five
-containers (`db`, `auth`, `account-db`, `account`, `gateway`) on a shared
-network. The gateway listens on `localhost:3000`, auth on `localhost:8081`,
-account on `localhost:5000`. Each service has its own Postgres container
-(not exposed on a host port, except the auth `db` container which is on
-`localhost:5432` for convenience).
+This builds the `auth`, `account`, and `gateway` images and starts all four
+containers (`db`, `auth`, `account`, `gateway`) on a shared network. The
+gateway listens on `localhost:3000`, auth on `localhost:8081`, account on
+`localhost:5000`. Postgres is a single shared instance (not per-service) to
+keep memory usage down, hosting two databases — `authdb` and `accountdb` —
+each owned by the `bankdemo` role. It's not exposed on a host port.
 
 To stop and remove the containers:
 
@@ -31,7 +31,8 @@ docker compose down -v
 
 ## Seeded users
 
-The `db/init.sql` script seeds three demo users on first startup:
+`db/init.sh` creates the `authdb` and `accountdb` databases on first startup and runs
+`db/sql/auth.sql` against `authdb`, seeding three demo users:
 
 | username | password    |
 |----------|-------------|
@@ -78,7 +79,8 @@ curl -i -X POST http://localhost:8081/login \
 
 ## Seeded accounts
 
-The `account-db/init.sql` script seeds starting balances for the same three demo users:
+`db/init.sh` also runs `db/sql/account.sql` against `accountdb`, seeding starting balances
+for the same three demo users:
 
 | username | balance |
 |----------|---------|

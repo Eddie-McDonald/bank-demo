@@ -1,9 +1,9 @@
 # bank-demo
 
-Demo banking application, built one vertical slice at a time. So far:
-API gateway (Node/Express) → Login/auth (Java/Spring Boot) → Postgres,
-API gateway → Account/balance (.NET/ASP.NET Core) → Postgres, and
-API gateway → Transfer (Python/FastAPI) → Postgres.
+Demo banking application, built one vertical slice at a time. All backend and frontend
+slices are now in place: a web frontend (Node/Express, static SPA) talks to an API gateway
+(Node/Express), which fronts Login/auth (Java/Spring Boot), Account/balance (.NET/ASP.NET
+Core), and Transfer (Python/FastAPI) — all backed by a single shared Postgres instance.
 
 ## Build and run
 
@@ -11,13 +11,13 @@ API gateway → Transfer (Python/FastAPI) → Postgres.
 docker compose up --build
 ```
 
-This builds the `auth`, `account`, `transfer`, and `gateway` images and
-starts all five containers (`db`, `auth`, `account`, `transfer`, `gateway`)
-on a shared network. The gateway listens on `localhost:3000`, auth on
-`localhost:8081`, account on `localhost:5000`, transfer on `localhost:8000`.
-Postgres is a single shared instance (not per-service) to keep memory usage
-down, hosting two databases — `authdb` and `accountdb` — each owned by the
-`bankdemo` role. It's not exposed on a host port.
+This builds the `auth`, `account`, `transfer`, `gateway`, and `frontend` images and
+starts all six containers (`db`, `auth`, `account`, `transfer`, `gateway`, `frontend`)
+on a shared network. Open **`http://localhost:8080`** in a browser for the UI. The gateway
+listens on `localhost:3000`, auth on `localhost:8081`, account on `localhost:5000`, transfer
+on `localhost:8000`. Postgres is a single shared instance (not per-service) to keep memory
+usage down, hosting two databases — `authdb` and `accountdb` — each owned by the `bankdemo`
+role. It's not exposed on a host port.
 
 To stop and remove the containers:
 
@@ -147,6 +147,22 @@ curl -i -X POST http://localhost:8000/transfer \
   -d '{"from_username":"bob","to_username":"carol","amount":50.00}'
 ```
 
+## Using the web UI
+
+Open `http://localhost:8080` in a browser. It's a minimal, dependency-light vanilla
+HTML/CSS/JS SPA (no frontend framework or build step) served by the `frontend` service,
+which proxies API calls to the gateway server-side (`/api/login`, `/api/accounts/:username/
+balance`, `/api/transfer`) so the browser only ever talks to `localhost:8080` — no CORS setup
+needed.
+
+1. Log in as `alice` / `password123`.
+2. The dashboard shows the current balance, with a Refresh button.
+3. Fill in the transfer form (recipient username + amount) and submit — the balance
+   auto-refreshes afterward.
+
+There's no session/token; the logged-in username is just held in browser memory, matching
+the backend, which doesn't issue one either.
+
 ## Rebuilding after code changes
 
 ```bash
@@ -154,4 +170,5 @@ docker compose up --build auth       # rebuild just the auth service
 docker compose up --build account    # rebuild just the account service
 docker compose up --build transfer   # rebuild just the transfer service
 docker compose up --build gateway    # rebuild just the gateway
+docker compose up --build frontend   # rebuild just the frontend
 ```

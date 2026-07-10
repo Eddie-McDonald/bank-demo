@@ -75,6 +75,21 @@ balance debit/credit, and Postgres can't do a transaction across two databases. 
 and was recorded in `transfers`; an oversized carol→alice transfer was rejected with "Insufficient
 funds" and left carol's balance unchanged; login and balance lookups still work.
 
-Next: add the frontend, per the build order above. No more backend databases are anticipated, but
-if one is needed, prefer adding it to an existing database in `db/sql/` over a new Postgres
-container unless it must be transactionally independent from what's already there.
+Slice 4 complete and verified (2026-07-10): Web frontend (Node.js/Express, :8080), wired in
+`docker-compose.yml`. Serves a minimal, dependency-light vanilla HTML/CSS/JS SPA (no frontend
+framework or build step) from `frontend/public/` — a login form, a balance view, and a transfer
+form. The frontend's Express server proxies `POST /api/login`, `GET /api/accounts/:username/
+balance`, and `POST /api/transfer` to the gateway (`GATEWAY_URL`, same proxy-per-hop pattern
+used everywhere else in this repo), so the browser only ever talks same-origin to the frontend —
+no CORS setup was needed on the gateway. Login state is just an in-memory JS variable in the
+browser; there's no session/token (matches the backend, which has none either). Verified end-to-end
+in a real headless browser (Playwright, run via a disposable container on the compose network,
+since this host has no browser/node tooling installed locally): logged in as alice, dashboard
+showed the balance, submitted a transfer to bob, balance auto-refreshed to the new amount, zero
+console errors. Screenshots confirmed the rendered UI. Fixed one bug found during that check: the
+transfer success message was reusing the error message's red CSS class — added distinct
+`.message.success` / `.message.error` classes.
+
+This completes the backend + frontend build order. RUM/browser instrumentation and Dynatrace
+OneAgent are still not added anywhere, per the Constraints section — only add them when
+explicitly instructed.

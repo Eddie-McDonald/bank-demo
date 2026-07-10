@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bank-demo</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <h1>bank-demo</h1>
+
+  <section id="login-section">
+    <h2>Log in</h2>
+    <form id="login-form">
+      <label>Username <input type="text" id="login-username" autocomplete="username" required></label>
+      <label>Password <input type="password" id="login-password" autocomplete="current-password" required></label>
+      <button type="submit">Log in</button>
+    </form>
+    <p id="login-message" class="message"></p>
+  </section>
+
+  <section id="dashboard-section" hidden>
+    <h2>Welcome, <span id="current-username"></span></h2>
+    <button id="logout-button" type="button">Log out</button>
+
+    <h3>Balance</h3>
+    <p class="balance">$<span id="balance-amount">-</span>
+      <button id="refresh-balance-button" type="button">Refresh</button>
+    </p>
+
+    <h3>Transfer</h3>
+    <form id="transfer-form">
+      <label>To <input type="text" id="transfer-to" required></label>
+      <label>Amount <input type="number" id="transfer-amount" step="0.01" min="0.01" required></label>
+      <button type="submit">Send</button>
+    </form>
+    <p id="transfer-message" class="message"></p>
+  </section>
+
+  <script src="/app.js"></script>
+</body>
+</html>

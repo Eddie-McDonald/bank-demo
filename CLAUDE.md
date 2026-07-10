@@ -63,6 +63,18 @@ against each). Both `auth` and `account` connect to the same `bankdemo` role, ju
 two small seed tables. `docker compose up --build -d` brings up all four containers (`db`, `auth`,
 `account`, `gateway`) cleanly; login and balance lookups both verified working end-to-end.
 
-Next: add transfer (Python/FastAPI), then the frontend, one at a time, per the build order above.
-When adding transfer's database, follow the same shared-instance pattern (new `transferdb` +
-seed script under `db/sql/`, wired into `db/init.sh`) rather than a new Postgres container.
+Slice 3 complete and verified (2026-07-10): Transfer service (Python/FastAPI, :8000), wired in
+`docker-compose.yml`. Exposes `POST /transfer` (`from_username`, `to_username`, `amount`), debits
+the sender and credits the recipient in `accounts`, and inserts a row into a new `transfers` table
+— all in one Postgres transaction with `SELECT ... FOR UPDATE` row locking, rejecting the transfer
+with a 400 if the sender's balance is insufficient. The `transfers` table lives in **`accountdb`**,
+not a separate `transferdb` as originally sketched below — it needs to commit atomically with the
+balance debit/credit, and Postgres can't do a transaction across two databases. Seed/schema is
+`db/sql/transfer.sql`, wired into `db/init.sh` after `account.sql`. Gateway forwards `POST
+/transfer` to it. Verified end-to-end: a 250.00 alice→bob transfer correctly moved the balances
+and was recorded in `transfers`; an oversized carol→alice transfer was rejected with "Insufficient
+funds" and left carol's balance unchanged; login and balance lookups still work.
+
+Next: add the frontend, per the build order above. No more backend databases are anticipated, but
+if one is needed, prefer adding it to an existing database in `db/sql/` over a new Postgres
+container unless it must be transactionally independent from what's already there.

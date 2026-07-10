@@ -6,6 +6,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 const AUTH_URL = process.env.AUTH_URL || 'http://localhost:8081';
 const ACCOUNT_URL = process.env.ACCOUNT_URL || 'http://localhost:5000';
+const TRANSFER_URL = process.env.TRANSFER_URL || 'http://localhost:8000';
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -34,6 +35,20 @@ app.get('/accounts/:username/balance', async (req, res) => {
     res.status(accountResponse.status).json(body);
   } catch (err) {
     res.status(502).json({ success: false, message: 'Account service unavailable' });
+  }
+});
+
+app.post('/transfer', async (req, res) => {
+  try {
+    const transferResponse = await fetch(`${TRANSFER_URL}/transfer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body),
+    });
+    const body = await transferResponse.json();
+    res.status(transferResponse.status).json(body);
+  } catch (err) {
+    res.status(502).json({ success: false, message: 'Transfer service unavailable' });
   }
 });
 

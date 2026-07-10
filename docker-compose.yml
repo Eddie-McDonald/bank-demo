@@ -49,6 +49,22 @@ services:
     networks:
       - bank-demo
 
+  transfer:
+    build: ./transfer
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: accountdb
+      DB_USER: bankdemo
+      DB_PASSWORD: bankdemo
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - bank-demo
+
   gateway:
     build: ./gateway
     ports:
@@ -57,9 +73,11 @@ services:
       PORT: 3000
       AUTH_URL: http://auth:8081
       ACCOUNT_URL: http://account:5000
+      TRANSFER_URL: http://transfer:8000
     depends_on:
       - auth
       - account
+      - transfer
     networks:
       - bank-demo
 

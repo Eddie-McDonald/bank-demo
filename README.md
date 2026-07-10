@@ -1,8 +1,9 @@
 # bank-demo
 
 Demo banking application, built one vertical slice at a time. So far:
-API gateway (Node/Express) → Login/auth (Java/Spring Boot) → Postgres, and
-API gateway → Account/balance (.NET/ASP.NET Core) → Postgres.
+API gateway (Node/Express) → Login/auth (Java/Spring Boot) → Postgres,
+API gateway → Account/balance (.NET/ASP.NET Core) → Postgres, and
+API gateway → Transfer (Python/FastAPI) → Postgres.
 
 ## Build and run
 
@@ -10,12 +11,13 @@ API gateway → Account/balance (.NET/ASP.NET Core) → Postgres.
 docker compose up --build
 ```
 
-This builds the `auth`, `account`, and `gateway` images and starts all four
-containers (`db`, `auth`, `account`, `gateway`) on a shared network. The
-gateway listens on `localhost:3000`, auth on `localhost:8081`, account on
-`localhost:5000`. Postgres is a single shared instance (not per-service) to
-keep memory usage down, hosting two databases — `authdb` and `accountdb` —
-each owned by the `bankdemo` role. It's not exposed on a host port.
+This builds the `auth`, `account`, `transfer`, and `gateway` images and
+starts all five containers (`db`, `auth`, `account`, `transfer`, `gateway`)
+on a shared network. The gateway listens on `localhost:3000`, auth on
+`localhost:8081`, account on `localhost:5000`, transfer on `localhost:8000`.
+Postgres is a single shared instance (not per-service) to keep memory usage
+down, hosting two databases — `authdb` and `accountdb` — each owned by the
+`bankdemo` role. It's not exposed on a host port.
 
 To stop and remove the containers:
 
@@ -110,10 +112,46 @@ You can also call the account service directly, bypassing the gateway:
 curl -i http://localhost:5000/accounts/bob/balance
 ```
 
+## Transfers
+
+`db/init.sh` also runs `db/sql/transfer.sql` against `accountdb`, creating a `transfers` table.
+Transfers debit the sender and credit the recipient in `accounts` and insert a row into
+`transfers`, all in one transaction (with row locking so concurrent transfers on the same
+account can't race).
+
+Successful transfer, through the gateway:
+
+```bash
+curl -i -X POST http://localhost:3000/transfer \
+  -H "Content-Type: application/json" \
+  -d '{"from_username":"alice","to_username":"bob","amount":250.00}'
+# HTTP/1.1 200 OK
+# {"success":true,"from_username":"alice","to_username":"bob","amount":"250"}
+```
+
+Insufficient funds:
+
+```bash
+curl -i -X POST http://localhost:3000/transfer \
+  -H "Content-Type: application/json" \
+  -d '{"from_username":"carol","to_username":"alice","amount":100000.00}'
+# HTTP/1.1 400 Bad Request
+# {"detail":"Insufficient funds"}
+```
+
+You can also call the transfer service directly, bypassing the gateway:
+
+```bash
+curl -i -X POST http://localhost:8000/transfer \
+  -H "Content-Type: application/json" \
+  -d '{"from_username":"bob","to_username":"carol","amount":50.00}'
+```
+
 ## Rebuilding after code changes
 
 ```bash
-docker compose up --build auth      # rebuild just the auth service
-docker compose up --build account   # rebuild just the account service
-docker compose up --build gateway   # rebuild just the gateway
+docker compose up --build auth       # rebuild just the auth service
+docker compose up --build account    # rebuild just the account service
+docker compose up --build transfer   # rebuild just the transfer service
+docker compose up --build gateway    # rebuild just the gateway
 ```

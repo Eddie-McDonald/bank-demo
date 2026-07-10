@@ -31,6 +31,39 @@ services:
     networks:
       - bank-demo
 
+  account-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: accountdb
+      POSTGRES_USER: accountdb
+      POSTGRES_PASSWORD: accountdb
+    volumes:
+      - ./account-db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U accountdb -d accountdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bank-demo
+
+  account:
+    build: ./account
+    ports:
+      - "5000:5000"
+    environment:
+      ASPNETCORE_URLS: http://+:5000
+      DB_HOST: account-db
+      DB_PORT: 5432
+      DB_NAME: accountdb
+      DB_USER: accountdb
+      DB_PASSWORD: accountdb
+    depends_on:
+      account-db:
+        condition: service_healthy
+    networks:
+      - bank-demo
+
   gateway:
     build: ./gateway
     ports:
@@ -38,8 +71,10 @@ services:
     environment:
       PORT: 3000
       AUTH_URL: http://auth:8081
+      ACCOUNT_URL: http://account:5000
     depends_on:
       - auth
+      - account
     networks:
       - bank-demo
 

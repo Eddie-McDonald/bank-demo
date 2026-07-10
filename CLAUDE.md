@@ -45,9 +45,15 @@ Check current progress against the status section below before starting new work
 ## Current status
 
 Slice 1 complete and verified (2026-07-10): API gateway (Node/Express, :3000) + Login/auth
-(Java/Spring Boot, :8081) + Postgres, wired in `docker-compose.yml`. `docker compose up --build -d`
-brings up all three containers cleanly. `/health` returns OK and `/login` works end-to-end through
-the gateway to the auth service against the seeded `users` table (e.g. alice/password123).
+(Java/Spring Boot, :8081) + Postgres, wired in `docker-compose.yml`. `/health` returns OK and
+`/login` works end-to-end through the gateway to the auth service against the seeded `users`
+table (e.g. alice/password123).
 
-Next: add account/balance (.NET), transfer (Python/FastAPI), and the frontend, one at a time, per
-the build order above.
+Slice 2 complete and verified (2026-07-10): Account/balance service (.NET/ASP.NET Core, :5000) +
+its own Postgres (`account-db`), wired in `docker-compose.yml`. Exposes
+`GET /accounts/{username}/balance`, backed by a seeded `accounts` table (alice/bob/carol). Gateway
+forwards `GET /accounts/{username}/balance` to it. `docker compose up --build -d` brings up all
+five containers (`db`, `auth`, `account-db`, `account`, `gateway`) cleanly; existing login flow
+still works.
+
+Next: add transfer (Python/FastAPI), then the frontend, one at a time, per the build order above.
